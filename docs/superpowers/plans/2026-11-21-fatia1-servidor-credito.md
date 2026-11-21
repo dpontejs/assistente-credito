@@ -26,7 +26,7 @@
 
 ---
 
-### Tarefa 1: Projeto e calculadoras
+### Task 1: Projeto e calculadoras
 
 **Files:** Create `pyproject.toml`, `.gitignore`, `.env.example`, `credito/__init__.py`, `credito/calc.py`, `tests/test_calc.py`
 
@@ -54,7 +54,7 @@ assert brl(1234.5) == "R$ 1.234,50"
 - [ ] **Passo 4:** implementar `credito/calc.py`. `payoff` simula mês a mês (juros sobre o saldo, última parcela parcial); recusa `payment <= balance * rate` com "a parcela não cobre os juros do mês" e corta em 600 meses com `ValueError`.
 - [ ] **Passo 5:** `uv run pytest` → PASS. Commit `feat: calculadoras de parcela, quitacao e portabilidade`.
 
-### Tarefa 2: Taxas de mercado do BCB com cache
+### Task 2: Taxas de mercado do BCB com cache
 
 **Files:** Create `credito/rates.py`, `tests/test_rates.py`
 
@@ -70,7 +70,7 @@ assert brl(1234.5) == "R$ 1.234,50"
 - [ ] **Passo 3:** implementar `credito/rates.py` (`http_get` com `httpx.get(url, params=..., timeout=30)`).
 - [ ] **Passo 4:** `uv run pytest` → PASS; `uv run pytest -m network` → PASS (confere o endpoint real). Commit `feat: taxas de mercado do BCB com cache local`.
 
-### Tarefa 3: Perfil persistente em SQLite
+### Task 3: Perfil persistente em SQLite
 
 **Files:** Create `credito/profiles.py`, `tests/test_profiles.py`
 
@@ -85,7 +85,7 @@ assert brl(1234.5) == "R$ 1.234,50"
 - [ ] **Passo 3:** implementar `credito/profiles.py` (`sqlite3`, uma conexão por chamada, `INSERT ... ON CONFLICT(user_id, kind, creditor) DO UPDATE`).
 - [ ] **Passo 4:** `uv run pytest` → PASS. Commit `feat: perfil persistente com dividas e planos`.
 
-### Tarefa 4: Servidor FastMCP
+### Task 4: Servidor FastMCP
 
 **Files:** Create `servers/credit_server.py`, `tests/test_server.py`, `README.md` (seção curta "Servidor MCP": como rodar)
 
