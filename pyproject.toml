@@ -22,5 +22,6 @@ packages = ["credito"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = '-m "not network"'
 markers = ["network: consulta a API real do BCB"]
