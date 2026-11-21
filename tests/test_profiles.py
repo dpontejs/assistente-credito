@@ -73,3 +73,10 @@ def test_debt_saldo_nao_positivo():
 def test_save_debt_usuario_inexistente(store):
     with pytest.raises(ValueError, match="usuário"):
         store.save_debt("zeca", rotativo(100))
+
+
+def test_save_debt_credor_ignora_maiusculas_e_espacos(store):
+    store.save_debt("ana", Debt(kind="cartao_rotativo", creditor="  banco alfa ", balance=3000, monthly_rate=14))
+    debts = [d for d in store.get_profile("ana")["debts"] if d["kind"] == "cartao_rotativo"]
+    assert len(debts) == 1
+    assert debts[0]["balance"] == 3000

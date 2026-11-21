@@ -32,6 +32,13 @@ def pct(value: float) -> str:
     return f"{value:.2f}%".replace(".", ",")
 
 
+def origin(rate) -> str:
+    """Diz de quando é o dado e se veio do cache."""
+    if rate.from_cache:
+        return f"dados em cache de {rate.period_start}"
+    return f"semana iniciada em {rate.period_start}"
+
+
 def as_error(func):
     """Transforma erros de entrada ou de rede em texto 'erro: ...' para o modelo."""
 
@@ -61,10 +68,9 @@ def build_server(db_path: Path, rates: RatesClient) -> FastMCP:
     def market_rate(modality: str) -> str:
         """Mediana da taxa de juros (% ao mês) que os bancos cobram na modalidade, segundo o BCB. Modalidades: cartao_rotativo, cartao_parcelado, cheque_especial, pessoal, consignado_inss, consignado_privado, consignado_publico, veiculo."""
         rate = rates.market_rate(modality)
-        origin = f"dados em cache de {rate.period_start}" if rate.from_cache else f"semana iniciada em {rate.period_start}"
         return (
             f"{modality}: mediana de {pct(rate.median)} ao mês entre {rate.n_institutions} bancos "
-            f"(BCB, {origin})."
+            f"(BCB, {origin(rate)})."
         )
 
     @mcp.tool()
@@ -76,7 +82,7 @@ def build_server(db_path: Path, rates: RatesClient) -> FastMCP:
         position = "acima da mediana" if ratio > 1 else "abaixo da mediana" if ratio < 1 else "igual à mediana"
         return (
             f"A taxa de {pct(monthly_rate)} ao mês é {f'{ratio:.2f}'.replace('.', ',')} vez a mediana de "
-            f"{pct(rate.median)} ({rate.n_institutions} bancos, BCB, {rate.period_start}): {position}."
+            f"{pct(rate.median)} ({rate.n_institutions} bancos, BCB, {origin(rate)}): {position}."
         )
 
     @mcp.tool()
@@ -104,10 +110,13 @@ def build_server(db_path: Path, rates: RatesClient) -> FastMCP:
     def simulate_portability(balance: float, n_left: int, current_rate: float, new_rate: float) -> str:
         """Compara a parcela atual com a de uma nova taxa (% ao mês) no mesmo prazo restante, para avaliar portabilidade."""
         result = portability(balance, n_left, current_rate, new_rate)
+        if result.total_savings >= 0:
+            verdict = f"economia total de {brl(result.total_savings)}"
+        else:
+            verdict = f"custo adicional de {brl(-result.total_savings)}; portar não compensa"
         return (
             f"Parcela atual {brl(result.current_installment)} ({pct(current_rate)}) contra "
-            f"{brl(result.new_installment)} ({pct(new_rate)}) em {n_left} meses: economia total de "
-            f"{brl(result.total_savings)}."
+            f"{brl(result.new_installment)} ({pct(new_rate)}) em {n_left} meses: {verdict}."
         )
 
     @mcp.tool()

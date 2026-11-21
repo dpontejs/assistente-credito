@@ -5,9 +5,9 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from credito.rates import MODALITIES
 
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS debts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL REFERENCES users(id),
     kind TEXT NOT NULL,
-    creditor TEXT NOT NULL,
+    creditor TEXT NOT NULL COLLATE NOCASE,
     balance REAL NOT NULL,
     monthly_rate REAL NOT NULL,
     installments_left INTEGER,
@@ -38,7 +38,9 @@ CREATE TABLE IF NOT EXISTS plans (
 
 class Debt(BaseModel):
     kind: Literal[tuple(MODALITIES)] = Field(description="Modalidade da dívida")
-    creditor: str = Field(description="Nome do credor, como o usuário informou")
+    creditor: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="Nome do credor, como o usuário informou"
+    )
     balance: float = Field(gt=0, description="Saldo devedor em reais")
     monthly_rate: float = Field(ge=0, description="Taxa de juros em % ao mês")
     installments_left: int | None = Field(default=None, gt=0, description="Parcelas restantes, se parcelada")
@@ -76,6 +78,12 @@ class ProfileStore:
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
+    @staticmethod
+    def _require_user(conn: sqlite3.Connection, user_id: str) -> None:
+        """Recusa escrita para usuário que não existe."""
+        if conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone() is None:
+            raise ValueError(f"usuário {user_id} não existe")
+
     def seed(self) -> None:
         """Cria os usuários fictícios que ainda não existem, sem mexer nos que já existem."""
         for (user_id, name, income), debts in SEED.items():
@@ -106,8 +114,7 @@ class ProfileStore:
     def save_debt(self, user_id: str, debt: Debt) -> int:
         """Insere a dívida ou atualiza a existente do mesmo tipo e credor; devolve o id."""
         with closing(self._connect()) as conn, conn:
-            if conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone() is None:
-                raise ValueError(f"usuário {user_id} não existe")
+            self._require_user(conn, user_id)
             row = conn.execute(
                 "INSERT INTO debts (user_id, kind, creditor, balance, monthly_rate, installments_left)"
                 " VALUES (?, ?, ?, ?, ?, ?)"
@@ -127,4 +134,5 @@ class ProfileStore:
     def save_plan(self, user_id: str, text: str) -> None:
         """Guarda um novo plano; o mais recente é o que vale."""
         with closing(self._connect()) as conn, conn:
+            self._require_user(conn, user_id)
             conn.execute("INSERT INTO plans (user_id, text) VALUES (?, ?)", (user_id, text))
