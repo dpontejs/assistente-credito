@@ -1,7 +1,7 @@
 # Assistente de dívidas e crédito
 
 - **Data:** 2026-11-21
-- **Status:** proposta
+- **Status:** aprovada
 - **ADRs:** —
 
 ## Objetivo
