@@ -72,4 +72,4 @@ Na UI: escolher a Ana, contar uma dívida nova, ver o painel atualizar, clicar e
 ## Riscos e dúvidas abertas
 
 - O endpoint exato do BCB (taxas por modalidade) precisa ser confirmado na fatia 1; se a API cair na demo, `market_rate` usa um cache local com a data.
-- Trabalho individual (autorizado como no da Unidade I); só o nome do aluno no README.
+- Trabalho individual, como o da Unidade I; só o nome do aluno no README.
