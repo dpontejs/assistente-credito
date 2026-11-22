@@ -84,3 +84,7 @@ def test_save_debt_credor_ignora_maiusculas_e_espacos(store):
 
 def test_perfil_traz_total_das_dividas(store):
     assert store.get_profile("ana")["total_balance"] == 19000
+
+
+def test_lista_usuarios_em_ordem_de_nome(store):
+    assert store.users() == [("ana", "Ana Souza"), ("bruno", "Bruno Lima"), ("carla", "Carla Mendes")]

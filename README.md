@@ -57,6 +57,18 @@ checkpointer SQLite (`data/checkpoints.db`).
 uv run python scripts/chat.py --user ana --thread t1 "Meu cartão cobra 14% ao mês. É normal?"
 ```
 
+## Interface
+
+```bash
+uv run streamlit run app.py
+```
+
+Barra lateral com o seletor de usuário fictício (Ana, Bruno, Carla), o botão
+"Nova conversa" e o painel do perfil: renda, total devido e cada dívida com a
+taxa comparada à mediana do mercado (🔴 acima, 🟢 abaixo). Cada resposta mostra
+as ferramentas e as skills usadas. Trocar de usuário abre outra conversa, porque
+cada conversa pertence a quem a começou.
+
 ## Testes
 
 ```bash

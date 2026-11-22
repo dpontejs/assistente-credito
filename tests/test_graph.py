@@ -180,7 +180,8 @@ def test_user_id_descartado_em_ferramenta_que_nao_o_declara():
         return await original(args, *rest, **kw)
 
     object.__setattr__(tool, "ainvoke", spy)
-    d = deps([call("credito_compare_rate", modality="pessoal", monthly_rate=5, user_id="atual"), say("ok")],
+    d = deps([call("credito_compare_rate", modality="pessoal", monthly_rate=5, user_id="atual",
+                   creditor="Banco Alfa"), say("ok")],
              tools=[profile_tool(), tool])
     state, _ = run(d, "minha taxa de 5% está boa?")
     assert sent == [{"modality": "pessoal", "monthly_rate": 5}]
