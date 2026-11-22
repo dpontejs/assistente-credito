@@ -1,0 +1,23 @@
+{
+  "url": "https://www.bcb.gov.br/api/conteudo/app/normativos/exibenormativo?p1=Resolu%C3%A7%C3%A3o&p2=4549",
+  "revogado": false,
+  "atualizacoes": "Resolução CMN nº 5.112/2023 - Inclusão: arts. 2º-A, 2º-B, 2º-C e 2º-D.;#",
+  "arquivo": "Res_4549_v2_L.pdf",
+  "id": "res4549",
+  "label": "Res. 4.549",
+  "title": "Financiamento do saldo da fatura do cartão (rotativo)",
+  "articles": [
+    "1º",
+    "2º",
+    "2º-A",
+    "2º-B",
+    "2º-C",
+    "2º-D",
+    "3º",
+    "4º",
+    "5º",
+    "6º",
+    "7º"
+  ],
+  "downloaded": "2026-11-22"
+}

@@ -1,0 +1,18 @@
+{
+  "url": "https://www.bcb.gov.br/api/conteudo/app/normativos/exibenormativo?p1=Resolu%C3%A7%C3%A3o&p2=4765",
+  "revogado": false,
+  "atualizacoes": "O art. 2º desta Resolução foi declarado inconstitucional pelo Supremo Tribunal Federal, mediante decisão final proferida na Ação Direta de Inconstitucionalidade nº 6.407-DF.;#Resolução CMN nº 4.962/2021 - Alteração, a partir de 1º/11/2021 - Revogação: art. 2º.;#",
+  "arquivo": "Res_4765_v2_L.pdf",
+  "id": "res4765",
+  "label": "Res. 4.765",
+  "title": "Cheque especial",
+  "articles": [
+    "1º",
+    "2º",
+    "3º",
+    "4º",
+    "5º",
+    "6º"
+  ],
+  "downloaded": "2026-11-22"
+}

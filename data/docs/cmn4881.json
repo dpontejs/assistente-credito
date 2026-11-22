@@ -1,0 +1,24 @@
+{
+  "url": "https://www.bcb.gov.br/api/conteudo/app/normativos/exibenormativo?p1=Resolu%C3%A7%C3%A3o%20CMN&p2=4881",
+  "revogado": false,
+  "atualizacoes": null,
+  "arquivo": null,
+  "id": "cmn4881",
+  "label": "Res. CMN 4.881",
+  "title": "Custo efetivo total (CET)",
+  "articles": [
+    "1º",
+    "2º",
+    "3º",
+    "4º",
+    "5º",
+    "6º",
+    "7º",
+    "8º",
+    "9º",
+    "10",
+    "11",
+    "12"
+  ],
+  "downloaded": "2026-11-22"
+}
