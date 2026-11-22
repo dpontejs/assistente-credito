@@ -21,5 +21,5 @@ def test_texto_sem_dados_fica_igual():
 
 
 def test_recusas_por_categoria():
-    assert set(REFUSALS) == {"injection", "fora_do_escopo", "dados_de_terceiros"}
+    assert set(REFUSALS) == {"injection", "fora_do_escopo", "dados_de_terceiros", "outro_usuario"}
     assert all(REFUSALS.values()) and SAFE_OUTPUT

@@ -74,6 +74,7 @@ REFUSALS = {
     "injection": "Não posso mudar minhas regras nem mostrar instruções internas. Posso ajudar com suas dívidas, juros, portabilidade ou com um plano de quitação.",
     "fora_do_escopo": "Esse assunto está fora do que eu faço: não recomendo investimentos específicos nem trato de temas fora de crédito e dívidas. Posso ajudar a entender seus juros, comparar com o mercado ou montar um plano de quitação.",
     "dados_de_terceiros": "Só consigo acessar o seu próprio perfil, nunca dados de outras pessoas ou do sistema. Quer que eu revise as suas dívidas?",
+    "outro_usuario": "Esta conversa pertence a outro usuário. Comece uma nova conversa para continuar.",
 }
 
 SAFE_OUTPUT = (

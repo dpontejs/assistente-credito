@@ -18,8 +18,16 @@ from credito.prompts import system_prompt
 from credito.rag import grade_chunks, rewrite_query
 
 
+MAX_TOOL_ROUNDS = 8
+BLOCKED_PLACEHOLDER = "[mensagem bloqueada pelo guardrail]"
+LIMIT_NOTE = "\n\n# Limite\nVocê já usou ferramentas demais neste turno. Responda agora com o que já tem, sem chamar ferramentas."
+LIMIT_FALLBACK = "Não consegui concluir a análise com as ferramentas disponíveis. Pode reformular ou dividir a pergunta?"
+
+
 class CreditState(MessagesState):
     user_id: str
+    owner: str | None
+    tool_rounds: int
     profile: str
     rewrites: int
     retry_query: str | None
@@ -70,8 +78,13 @@ def build_graph(deps: Deps, checkpointer=None):
     async def guard_input(state: CreditState) -> Command[Literal["refuse", "load_profile"]]:
         """Mascara CPF e cartão na mensagem e barra injection, fora de escopo e pedido de dados de terceiros."""
         message = last_human(state)
+        update: dict = {"rewrites": 0, "retry_query": None, "search_exhausted": False, "blocked": None,
+                        "tool_rounds": 0}
+        owner = state.get("owner")
+        if owner and owner != state["user_id"]:
+            return Command(update={**update, "blocked": "outro_usuario"}, goto="refuse")
+        update["owner"] = owner or state["user_id"]
         masked = mask_sensitive(as_text(message.content))
-        update: dict = {"rewrites": 0, "retry_query": None, "search_exhausted": False, "blocked": None}
         if masked != message.content:
             update["messages"] = [HumanMessage(masked, id=message.id)]
         verdict = await deps.input_guard.ainvoke(INPUT_GUARD_PROMPT.format(message=masked))
@@ -80,8 +93,9 @@ def build_graph(deps: Deps, checkpointer=None):
         return Command(update=update, goto="load_profile")
 
     def refuse(state: CreditState) -> dict:
-        """Responde com a recusa fixa da categoria barrada."""
-        return {"messages": [AIMessage(REFUSALS[state["blocked"]])]}
+        """Troca a mensagem barrada por um marcador (para não voltar ao modelo depois) e responde com a recusa fixa."""
+        placeholder = HumanMessage(BLOCKED_PLACEHOLDER, id=last_human(state).id)
+        return {"messages": [placeholder, AIMessage(REFUSALS[state["blocked"]])]}
 
     async def load_profile(state: CreditState) -> dict:
         """Lê o perfil do usuário ativo no servidor MCP; é isso que faz o agente lembrar entre conversas."""
@@ -98,7 +112,12 @@ def build_graph(deps: Deps, checkpointer=None):
         """Decide se responde, chama ferramentas ou carrega uma skill."""
         prompt = system_prompt(state.get("profile", ""), deps.catalog, state.get("retry_query"),
                                state.get("search_exhausted", False))
-        response = await model.ainvoke([SystemMessage(prompt), *state["messages"]])
+        if state.get("tool_rounds", 0) < MAX_TOOL_ROUNDS:
+            return {"messages": [await model.ainvoke([SystemMessage(prompt), *state["messages"]])]}
+        # no limite, o modelo responde sem ferramentas; uma chamada que escape é descartada
+        response = await deps.model.ainvoke([SystemMessage(prompt + LIMIT_NOTE), *state["messages"]])
+        if response.tool_calls:
+            response = AIMessage(as_text(response.content) or LIMIT_FALLBACK)
         return {"messages": [response]}
 
     async def run_tool(call: dict, user_id: str) -> ToolMessage:
@@ -122,7 +141,7 @@ def build_graph(deps: Deps, checkpointer=None):
         """Executa em paralelo as ferramentas pedidas pelo agente."""
         calls = state["messages"][-1].tool_calls
         results = await asyncio.gather(*(run_tool(call, state["user_id"]) for call in calls))
-        return {"messages": list(results)}
+        return {"messages": list(results), "tool_rounds": state.get("tool_rounds", 0) + 1}
 
     async def grade(state: CreditState) -> Command[Literal["agent", "rewrite"]]:
         """Avalia se os trechos das normas respondem; senão manda reescrever, até o limite."""

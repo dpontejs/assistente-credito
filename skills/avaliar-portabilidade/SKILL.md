@@ -2,7 +2,7 @@
 name: avaliar-portabilidade
 description: Avalia se vale levar uma dívida (empréstimo, consignado, financiamento ou saldo da fatura do cartão) para outro banco com juros menores, e explica como pedir. Use quando o usuário perguntar sobre portabilidade, trocar de banco ou conseguir uma taxa menor para uma dívida que já tem.
 ---
-1. Identifique a dívida: modalidade, saldo, taxa mensal e parcelas restantes. Use o perfil e pergunte o que faltar.
+1. Identifique a dívida: modalidade, saldo, taxa mensal e parcelas restantes. Use o perfil e pergunte o que faltar. Dívidas sem parcelas (rotativo do cartão, cheque especial) não têm prazo: pergunte em quantas parcelas o usuário quer pagar e use esse número como `n_left`.
 2. Chame `credito_market_rate` com a modalidade para ter a mediana atual do mercado.
 3. Chame `credito_simulate_portability` comparando a taxa atual com a mediana. Se o usuário tiver uma proposta de outro banco, simule também com a taxa dela.
 4. Se a simulação mostrar custo adicional, diga que portar não compensa e pare aqui.
