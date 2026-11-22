@@ -29,13 +29,12 @@ from evals.cases import CASES, Case, EvalRun
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "evals" / "results"
 JUDGE_MODEL = "google_genai:gemini-3.8-flash"
-CASE_TIMEOUT = 300
+TURN_TIMEOUT = 300  # por turno
 
 # USD por 1M tokens, página oficial de preços em 22/11/2026; a saída inclui tokens de raciocínio
 PRICES = {
     "gemini-3.5-flash-lite": (0.30, 2.50),
     "gemini-3.6-flash": (0.75, 3.75),
-    "gemini-3.8-flash": (0.75, 3.75),
 }
 
 JUDGE_PROMPT = """# Papel
@@ -90,16 +89,17 @@ async def execute(case: Case, model: str) -> EvalRun:
         profiles = Path(tmp) / "profiles.db"
         ProfileStore(profiles).seed()
         threads = {name: f"eval-{case.id}-{name}-{uuid.uuid4().hex[:6]}" for name, _ in case.turns}
-        start = time.perf_counter()
         try:
             async with open_assistant(db_path=Path(tmp) / "checkpoints.db", model_name=f"google_genai:{model}",
                                       profiles_db=profiles) as assistant:
                 for thread, text in case.turns:
                     config = {"configurable": {"thread_id": threads[thread]}, "callbacks": [usage]}
+                    start = time.perf_counter()  # latência só dos turnos, sem abrir servidores e índice
                     state = await asyncio.wait_for(
                         assistant.graph.ainvoke({"messages": [HumanMessage(text)], "user_id": case.user}, config),
-                        CASE_TIMEOUT,
+                        TURN_TIMEOUT,
                     )
+                    run.seconds += time.perf_counter() - start
                     turn = turns(state["messages"])[-1]
                     run.answers.append(turn.answer)
                     run.tools_per_turn.append(turn.tools)
@@ -111,22 +111,22 @@ async def execute(case: Case, model: str) -> EvalRun:
                 run.history = "\n".join(histories)
         except Exception as error:  # o caso reprova com o erro registrado; a rodada segue
             run.error = f"{type(error).__name__}: {error}"[:500]
-        run.seconds = time.perf_counter() - start
     for counts in usage.usage_metadata.values():
         run.input_tokens += counts.get("input_tokens", 0)
         run.output_tokens += counts.get("output_tokens", 0)
     return run
 
 
-def judge(run: EvalRun, judge_model) -> Verdict | None:
-    """Pede o veredito ao juiz; falha do juiz vira None (caso não julgado)."""
+def judge(run: EvalRun, judge_model) -> tuple[Verdict | None, str | None]:
+    """Pede o veredito ao juiz; falha do juiz vira (None, erro): caso não julgado, nunca aprovado."""
     conversation = "\n\n".join(
         f"Usuário: {text}\nAssistente: {answer}" for (_, text), answer in zip(run.case.turns, run.answers)
     )
     try:
-        return judge_model.invoke(JUDGE_PROMPT.format(conversation=conversation, expected=run.case.expected))
-    except Exception:
-        return None
+        verdict = judge_model.invoke(JUDGE_PROMPT.format(conversation=conversation, expected=run.case.expected))
+    except Exception as error:
+        return None, f"{type(error).__name__}: {error}"[:300]
+    return verdict, None if verdict is not None else "saída estruturada vazia"
 
 
 def run_model(model: str, judge_model) -> list[dict]:
@@ -134,8 +134,8 @@ def run_model(model: str, judge_model) -> list[dict]:
     rows = []
     for case in CASES:
         run = asyncio.run(execute(case, model))
-        verdict = judge(run, judge_model) if run.error is None else None
-        result = score(run, verdict)
+        verdict, judge_error = judge(run, judge_model) if run.error is None else (None, None)
+        result = {**score(run, verdict), "judge_error": judge_error}
         rows.append({
             "id": case.id, "title": case.title, "component": case.component, "challenging": case.challenging,
             "input": [text for _, text in case.turns], "expected": case.expected, "answers": run.answers,
@@ -150,11 +150,23 @@ def run_model(model: str, judge_model) -> list[dict]:
     return rows
 
 
+def observation(row: dict) -> str:
+    """Motivo mostrado na tabela: erro, checagens que falharam, falta de julgamento ou o veredito."""
+    if row["error"]:
+        return row["error"]
+    if row["checks_failed"]:
+        return "; ".join(row["checks_failed"])
+    if not row["judged"]:
+        return f"não julgado: {row.get('judge_error') or 'sem veredito'}"
+    return row["verdict"] or ""
+
+
 def write_report() -> None:
     """Reescreve evals/RESULTADOS.md a partir de todos os JSON em evals/results/."""
     lines = ["# Resultados da avaliação", "", "Gerado por `uv run python -m evals.run`. Juiz: "
-             f"`{JUDGE_MODEL}`. Custos pelos preços oficiais de 22/11/2026.", "",
-             "| Modelo | Acerto | Latência média | Custo total (10 casos) | Tokens entrada / saída |",
+             f"`{JUDGE_MODEL}`. Custos pelos preços oficiais de 22/11/2026, sem os embeddings da busca e sem o juiz. "
+             "Latência = soma dos turnos do caso, sem abrir servidores e índice. Uma rodada por modelo.", "",
+             "| Modelo | Acerto | Latência média por caso | Custo total (10 casos) | Tokens entrada / saída |",
              "|---|---|---|---|---|"]
     per_model = {path.stem: json.loads(path.read_text()) for path in sorted(RESULTS.glob("*.json"))}
     for model, rows in per_model.items():
@@ -168,7 +180,7 @@ def write_report() -> None:
                   "|---|---|---|---|---|---|---|"]
         for r in rows:
             used = sorted({t for turn in r["tools"] for t in turn}) + [f"skill {s}" for turn in r["skills"] for s in turn]
-            note = r["error"] or "; ".join(r["checks_failed"]) or (r["verdict"] or "")
+            note = observation(r)
             lines.append(f"| {r['id']} | {r['title']}{' (desafiador)' if r['challenging'] else ''} | {r['component']} | "
                          f"{', '.join(f'`{u}`' for u in used) or '-'} | {'sim' if r['passed'] else 'não'} | "
                          f"{r['seconds']} s | {note.replace('|', '/')} |")

@@ -36,3 +36,11 @@ def test_checagem_do_total_do_caso_8():
     run = EvalRun(case=case, answers=["Salvei.", "Você deve R$ 11.700,00 no total."],
                   tools_per_turn=[["credito_save_debt"], []], skills_per_turn=[[], []])
     assert [check(run) for check in case.checks] == [None] * len(case.checks)
+
+
+def test_caso_7_exige_a_conta_no_segundo_turno():
+    case = next(c for c in CASES if c.id == 7)
+    computed_early = EvalRun(case=case, answers=["5 meses", "5 meses"],
+                             tools_per_turn=[["credito_simulate_payoff"], []], skills_per_turn=[[], []])
+    assert any(check(computed_early) for check in case.checks)
+    assert not any(w in case.turns[0][1].lower() for w in ("meses", "quanto tempo", "quitar"))

@@ -48,3 +48,54 @@ def test_skill_esperada():
     case = next(c for c in CASES if c.id == 5)
     run = EvalRun(case=case, answers=["plano"], tools_per_turn=[["credito_simulate_payoff"]], skills_per_turn=[[]])
     assert not score(run, YES)["tools_ok"]
+
+
+def test_execute_registra_erro_sem_derrubar(monkeypatch):
+    import asyncio
+    from contextlib import asynccontextmanager
+
+    from evals.run import execute
+
+    @asynccontextmanager
+    async def broken(**kwargs):
+        raise RuntimeError("servidor MCP caiu")
+        yield
+
+    monkeypatch.setattr("credito.assistant.open_assistant", broken)
+    run = asyncio.run(execute(CASE, "gemini-3.5-flash-lite"))
+    assert "servidor MCP caiu" in run.error
+    assert not score(run, YES)["passed"]
+
+
+def test_latencia_conta_so_os_turnos(monkeypatch):
+    import asyncio
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    from langchain_core.messages import AIMessage
+
+    from evals.run import execute
+
+    class Graph:
+        async def ainvoke(self, state, config):
+            return {"messages": [*state["messages"], AIMessage("ok")]}
+
+        async def aget_state(self, config):
+            return SimpleNamespace(values={"messages": []})
+
+    @asynccontextmanager
+    async def slow_open(**kwargs):
+        await asyncio.sleep(0.5)  # abrir servidores MCP e índice não é latência de resposta
+        yield SimpleNamespace(graph=Graph(), tools=[])
+
+    monkeypatch.setattr("credito.assistant.open_assistant", slow_open)
+    run = asyncio.run(execute(CASE, "gemini-3.5-flash-lite"))
+    assert run.error is None
+    assert run.seconds < 0.3
+
+
+def test_observacao_de_caso_nao_julgado():
+    from evals.run import observation
+
+    row = {"error": None, "checks_failed": [], "verdict": None, "judged": False, "judge_error": "429"}
+    assert observation(row).startswith("não julgado")
