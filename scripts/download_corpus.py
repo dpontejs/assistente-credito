@@ -35,6 +35,10 @@ def download_source(source: Source, out_dir: Path, get=http_get) -> int:
         articles = [(label, text) for label, text in articles if label in source.articles]
     if not articles:
         raise FetchError(f"{source.id}: nenhum artigo encontrado no texto baixado")
+    labels = [label for label, _ in articles]
+    repeated = sorted({label for label in labels if labels.count(label) > 1})
+    if repeated:
+        raise FetchError(f"{source.id}: artigos repetidos {repeated}; provável redação antiga sem marcação")
     (out_dir / f"{source.id}.txt").write_text("\n\n".join(text for _, text in articles) + "\n")
     meta = {**meta, "id": source.id, "label": source.label, "title": source.title,
             "articles": [label for label, _ in articles], "downloaded": date.today().isoformat()}

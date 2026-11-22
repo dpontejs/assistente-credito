@@ -17,6 +17,7 @@ class Source:
     url: str | None = None
     bcb_type: str | None = None
     bcb_number: str | None = None
+    bcb_year: str | None = None  # confere que a API devolveu a norma certa, não outra de mesmo número
     articles: tuple[str, ...] | None = None  # None indexa todos os artigos
 
 
@@ -27,9 +28,9 @@ CDC_ARTICLES = (
 )
 
 
-def bcb(id: str, label: str, title: str, bcb_type: str, number: str) -> Source:
+def bcb(id: str, label: str, title: str, bcb_type: str, number: str, year: str) -> Source:
     """Atalho para uma norma do CMN ou do BCB."""
-    return Source(id=id, label=label, title=title, kind="bcb", bcb_type=bcb_type, bcb_number=number)
+    return Source(id=id, label=label, title=title, kind="bcb", bcb_type=bcb_type, bcb_number=number, bcb_year=year)
 
 
 SOURCES: list[Source] = [
@@ -41,11 +42,11 @@ SOURCES: list[Source] = [
            url=f"{PLANALTO}/_ato2023-2026/2023/lei/l14690.htm", articles=("27", "28")),
     Source("lei10820", "Lei 10.820", "Crédito consignado (compilado)", "planalto",
            url=f"{PLANALTO}/leis/2003/L10.820compilado.htm"),
-    bcb("res4549", "Res. 4.549", "Financiamento do saldo da fatura do cartão (rotativo)", "Resolução", "4549"),
-    bcb("bcb96", "Res. BCB 96", "Contas de pagamento e fatura do cartão", "Resolução BCB", "96"),
-    bcb("cmn4882", "Res. CMN 4.882", "Encargos por atraso", "Resolução CMN", "4882"),
-    bcb("res4765", "Res. 4.765", "Cheque especial", "Resolução", "4765"),
-    bcb("cmn5057", "Res. CMN 5.057", "Portabilidade de crédito", "Resolução CMN", "5057"),
-    bcb("res3919", "Res. 3.919", "Tarifas bancárias", "Resolução", "3919"),
-    bcb("cmn4881", "Res. CMN 4.881", "Custo efetivo total (CET)", "Resolução CMN", "4881"),
+    bcb("res4549", "Res. 4.549", "Financiamento do saldo da fatura do cartão (rotativo)", "Resolução", "4549", "2017"),
+    bcb("bcb96", "Res. BCB 96", "Contas de pagamento e fatura do cartão", "Resolução BCB", "96", "2021"),
+    bcb("cmn4882", "Res. CMN 4.882", "Encargos por atraso", "Resolução CMN", "4882", "2020"),
+    bcb("res4765", "Res. 4.765", "Cheque especial", "Resolução", "4765", "2019"),
+    bcb("cmn5057", "Res. CMN 5.057", "Portabilidade de crédito", "Resolução CMN", "5057", "2022"),
+    bcb("res3919", "Res. 3.919", "Tarifas bancárias", "Resolução", "3919", "2010"),
+    bcb("cmn4881", "Res. CMN 4.881", "Custo efetivo total (CET)", "Resolução CMN", "4881", "2020"),
 ]

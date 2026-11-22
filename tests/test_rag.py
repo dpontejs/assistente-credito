@@ -1,3 +1,4 @@
+import re
 import json
 
 import pytest
@@ -45,7 +46,7 @@ def test_cada_trecho_comeca_com_rotulo(docs_dir):
 def test_metadados_do_trecho(docs_dir):
     chunk = next(c for c in load_chunks(docs_dir) if c.metadata["article"] == "54-B")
     assert chunk.metadata == {"source_id": "cdc", "label": "CDC", "article": "54-B", "url": "https://planalto/cdc"}
-    assert chunk.id == "cdc:54-B:0"
+    assert re.fullmatch(r"cdc:54-B:0:[0-9a-f]{12}", chunk.id)
 
 
 def test_nota_vira_trecho_rotulado(docs_dir):
@@ -117,3 +118,19 @@ def test_indexacao_em_lotes(docs_dir, tmp_path):
 
     build_vector_store(docs_dir, tmp_path / "chroma", Counting(size=32), batch_size=2)
     assert max(seen) <= 2
+
+
+def test_nota_alterada_e_reindexada_sem_o_texto_antigo(docs_dir, tmp_path, store):
+    note = docs_dir / "notas" / "teto.md"
+    note.write_text(note.read_text().replace("100%", "150%"))
+    store = build_vector_store(docs_dir, tmp_path / "chroma", DeterministicFakeEmbedding(size=32))
+    texts = store.get()["documents"]
+    assert any("150%" in t for t in texts)
+    assert not any("100% do valor original" in t for t in texts)
+
+
+def test_artigo_removido_sai_do_indice(docs_dir, tmp_path, store):
+    cdc = docs_dir / "cdc.txt"
+    cdc.write_text(cdc.read_text().split("\n\nArt. 54-B")[0] + "\n")
+    store = build_vector_store(docs_dir, tmp_path / "chroma", DeterministicFakeEmbedding(size=32))
+    assert not any(":54-B:" in i for i in store.get()["ids"])

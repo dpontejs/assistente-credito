@@ -71,6 +71,12 @@ def _fetch_bcb(source: Source, get: Get) -> tuple[str, dict]:
             "(resoluções do CMN anteriores a 2020 usam 'Resolução', as novas 'Resolução CMN')"
         )
     item = items[0]
+    year = str(item.get("Data") or "")[:4]
+    if source.bcb_year and year != source.bcb_year:
+        raise FetchError(
+            f"{source.id}: a API devolveu '{item.get('Titulo')}' de {year}, não a de {source.bcb_year}; "
+            "o tipo da norma provavelmente está errado"
+        )
     if str(item.get("Revogado")).lower() == "true":
         raise FetchError(f"{source.id}: a norma consta como revogada no BCB")
     meta = {"url": url, "revogado": False, "atualizacoes": item.get("Atualizacoes"), "arquivo": None}

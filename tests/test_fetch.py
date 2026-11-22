@@ -5,12 +5,13 @@ import pytest
 from credito.corpus.fetch import FetchError, fetch_source, latest_consolidated_pdf
 from credito.corpus.sources import SOURCES, Source
 
-BCB_OLD = Source(id="res9", label="Res. 9", title="t", kind="bcb", bcb_type="Resolução", bcb_number="9")
+BCB_OLD = Source(id="res9", label="Res. 9", title="t", kind="bcb", bcb_type="Resolução", bcb_number="9",
+                 bcb_year="2017")
 PLANALTO = Source(id="lei1", label="Lei 1", title="t", kind="planalto", url="https://planalto/l1.htm")
 
 
 def bcb_json(**fields) -> bytes:
-    item = {"Id": "123", "Revogado": "False", "Documentos": None, "Texto": "<p>Art. 1º Texto.</p>",
+    item = {"Id": "123", "Data": "2017-05-25T03:00:00Z", "Revogado": "False", "Documentos": None, "Texto": "<p>Art. 1º Texto.</p>",
             "Atualizacoes": None, **fields}
     return json.dumps({"conteudo": [item]}).encode()
 
@@ -91,3 +92,13 @@ def test_planalto_e_bcb_reais():
     assert "Art. 54-A" in cdc
     cmn, _ = fetch_source(by_id["cmn4882"])
     assert "Art. 1º" in cmn
+
+
+def test_bcb_norma_de_outro_ano_falha():
+    get = fake_get({"exibenormativo": bcb_json(Data="1968-07-31T03:00:00Z")})
+    with pytest.raises(FetchError, match="1968"):
+        fetch_source(BCB_OLD, get=get)
+
+
+def test_todas_as_fontes_do_bcb_declaram_o_ano():
+    assert all(s.bcb_year for s in SOURCES if s.kind == "bcb")

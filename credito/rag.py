@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -55,11 +56,16 @@ class GradeDocuments(BaseModel):
 
 
 def _split(text: str, label: str, metadata: dict, id_prefix: str) -> list[Document]:
-    """Quebra um artigo ou nota em pedaços, cada um começando com o rótulo da fonte."""
-    return [
-        Document(page_content=f"[{label}] {piece}", metadata=metadata, id=f"{id_prefix}:{k}")
-        for k, piece in enumerate(SPLITTER.split_text(text))
-    ]
+    """Quebra um artigo ou nota em pedaços, cada um começando com o rótulo da fonte.
+
+    O id leva um hash do conteúdo: texto alterado vira id novo e é reindexado.
+    """
+    chunks = []
+    for k, piece in enumerate(SPLITTER.split_text(text)):
+        content = f"[{label}] {piece}"
+        digest = hashlib.sha256(content.encode()).hexdigest()[:12]
+        chunks.append(Document(page_content=content, metadata=metadata, id=f"{id_prefix}:{k}:{digest}"))
+    return chunks
 
 
 def load_chunks(docs_dir: Path) -> list[Document]:
@@ -92,7 +98,7 @@ def build_vector_store(
     batch_size: int = 80,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Chroma:
-    """Abre o índice persistido e indexa, em lotes, só os trechos que ainda faltam.
+    """Sincroniza o índice com os textos: remove trechos que mudaram ou sumiram e indexa, em lotes, os que faltam.
 
     Lotes de 80 cabem na cota gratuita do Gemini (100 por minuto); se a cota estourar,
     espera um minuto e tenta o mesmo lote de novo. Um índice interrompido é completado
@@ -104,8 +110,13 @@ def build_vector_store(
         persist_directory=str(persist_dir),
         collection_metadata={"hnsw:space": "cosine"},
     )
+    chunks = load_chunks(docs_dir)
+    current = {chunk.id for chunk in chunks}
     indexed = set(store.get()["ids"])
-    missing = [chunk for chunk in load_chunks(docs_dir) if chunk.id not in indexed]
+    stale = sorted(indexed - current)
+    if stale:
+        store.delete(ids=stale)
+    missing = [chunk for chunk in chunks if chunk.id not in indexed]
     for start in range(0, len(missing), batch_size):
         batch = missing[start:start + batch_size]
         for attempt in range(5):
