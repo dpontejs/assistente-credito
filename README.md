@@ -44,6 +44,19 @@ uv run python scripts/download_corpus.py   # baixa de novo do Planalto e do BCB
 O índice (`data/chroma/`) usa embeddings `gemini-embedding-001` e é criado na
 primeira execução do agente; na cota gratuita leva uns 3 minutos.
 
+## Agente
+
+Grafo LangGraph em `credito/graph.py`: guarda de entrada → perfil → agente ⇄
+ferramentas, com avaliação e reescrita da busca nas normas → guarda de saída.
+`credito/assistant.py` liga o Gemini (`CREDITO_MODEL`, padrão
+`google_genai:gemini-3.5-flash-lite`), os dois servidores MCP (o próprio e o
+`mcp-server-time`, via `uvx`), a busca nas normas, as skills de `skills/` e o
+checkpointer SQLite (`data/checkpoints.db`).
+
+```bash
+uv run python scripts/chat.py --user ana --thread t1 "Meu cartão cobra 14% ao mês. É normal?"
+```
+
 ## Testes
 
 ```bash

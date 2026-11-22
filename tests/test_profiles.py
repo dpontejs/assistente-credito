@@ -80,3 +80,7 @@ def test_save_debt_credor_ignora_maiusculas_e_espacos(store):
     debts = [d for d in store.get_profile("ana")["debts"] if d["kind"] == "cartao_rotativo"]
     assert len(debts) == 1
     assert debts[0]["balance"] == 3000
+
+
+def test_perfil_traz_total_das_dividas(store):
+    assert store.get_profile("ana")["total_balance"] == 19000

@@ -7,3 +7,4 @@ __pycache__/
 .superpowers/
 .omc/
 data/chroma/
+data/checkpoints.db*

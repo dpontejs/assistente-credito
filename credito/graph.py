@@ -110,6 +110,8 @@ def build_graph(deps: Deps, checkpointer=None):
         else:
             if "user_id" in tool.args:
                 args["user_id"] = user_id
+            else:
+                args.pop("user_id", None)  # o modelo às vezes repete o user_id em ferramentas que não o têm
             try:
                 content = as_text(await tool.ainvoke(args))
             except Exception as error:  # a falha vira resposta para o modelo, não derruba o grafo

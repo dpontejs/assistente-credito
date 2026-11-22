@@ -252,6 +252,7 @@ dependencies = [
     { name = "langgraph-checkpoint-sqlite" },
     { name = "pydantic" },
     { name = "pypdf" },
+    { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
 
@@ -274,6 +275,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2" },
     { name = "pypdf", specifier = ">=7.1.1" },
     { name = "pytest", marker = "extra == 'dev'" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "pyyaml", specifier = ">=6.0.4" },
 ]
 provides-extras = ["dev"]

@@ -109,7 +109,9 @@ class ProfileStore:
             plan = conn.execute(
                 "SELECT text FROM plans WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
             ).fetchone()
-        return {**dict(user), "debts": [dict(d) for d in debts], "plan": plan["text"] if plan else None}
+        debts = [dict(d) for d in debts]
+        total = round(sum(d["balance"] for d in debts), 2)  # a soma vem pronta para o modelo não calcular de cabeça
+        return {**dict(user), "debts": debts, "total_balance": total, "plan": plan["text"] if plan else None}
 
     def save_debt(self, user_id: str, debt: Debt) -> int:
         """Insere a dívida ou atualiza a existente do mesmo tipo e credor; devolve o id."""

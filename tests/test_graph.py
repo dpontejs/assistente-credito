@@ -165,3 +165,23 @@ def test_usuario_sem_perfil_segue():
     state, _ = run(d, "oi", user="zeca")
     assert state["messages"][-1].content == "Olá!"
     assert "sem perfil" in d.model.system_prompt()
+
+
+def test_user_id_descartado_em_ferramenta_que_nao_o_declara():
+    def credito_compare_rate(modality: str, monthly_rate: float) -> str:
+        return "abaixo da mediana"
+
+    tool = make_tool("credito_compare_rate", credito_compare_rate)
+    sent = []  # o que o nó tools envia; a ferramenta do MCP repassa extras ao servidor, que os rejeita
+    original = tool.ainvoke
+
+    async def spy(args, *rest, **kw):
+        sent.append(dict(args))
+        return await original(args, *rest, **kw)
+
+    object.__setattr__(tool, "ainvoke", spy)
+    d = deps([call("credito_compare_rate", modality="pessoal", monthly_rate=5, user_id="atual"), say("ok")],
+             tools=[profile_tool(), tool])
+    state, _ = run(d, "minha taxa de 5% está boa?")
+    assert sent == [{"modality": "pessoal", "monthly_rate": 5}]
+    assert next(m for m in state["messages"] if isinstance(m, ToolMessage)).content == "abaixo da mediana"
