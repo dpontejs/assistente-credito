@@ -38,9 +38,12 @@ def test_checagem_do_total_do_caso_8():
     assert [check(run) for check in case.checks] == [None] * len(case.checks)
 
 
-def test_caso_7_exige_a_conta_no_segundo_turno():
+def test_caso_7_turno_1_so_informa_e_turno_2_responde_com_o_valor():
     case = next(c for c in CASES if c.id == 7)
-    computed_early = EvalRun(case=case, answers=["5 meses", "5 meses"],
-                             tools_per_turn=[["credito_simulate_payoff"], []], skills_per_turn=[[], []])
-    assert any(check(computed_early) for check in case.checks)
-    assert not any(w in case.turns[0][1].lower() for w in ("meses", "quanto tempo", "quitar"))
+    assert "?" not in case.turns[0][1]
+    remembered = EvalRun(case=case, answers=["Anotado.", "Você quita em 5 meses."],
+                         tools_per_turn=[["credito_simulate_payoff"], []], skills_per_turn=[[], []])
+    asked_again = EvalRun(case=case, answers=["Anotado.", "Quanto você pode pagar por mês?"],
+                          tools_per_turn=[[], []], skills_per_turn=[[], []])
+    assert [check(remembered) for check in case.checks] == [None] * len(case.checks)
+    assert any(check(asked_again) for check in case.checks)

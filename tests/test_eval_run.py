@@ -99,3 +99,10 @@ def test_observacao_de_caso_nao_julgado():
 
     row = {"error": None, "checks_failed": [], "verdict": None, "judged": False, "judge_error": "429"}
     assert observation(row).startswith("não julgado")
+
+
+def test_mesclar_resultados_substitui_so_os_casos_rodados():
+    from evals.run import merge_rows
+
+    old = [{"id": 1, "passed": True}, {"id": 7, "passed": False}]
+    assert merge_rows(old, [{"id": 7, "passed": True}]) == [{"id": 1, "passed": True}, {"id": 7, "passed": True}]

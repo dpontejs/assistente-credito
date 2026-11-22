@@ -129,10 +129,18 @@ def judge(run: EvalRun, judge_model) -> tuple[Verdict | None, str | None]:
     return verdict, None if verdict is not None else "saída estruturada vazia"
 
 
-def run_model(model: str, judge_model) -> list[dict]:
-    """Roda os 10 casos com um modelo e grava o JSON de resultados."""
+def merge_rows(old: list[dict], new: list[dict]) -> list[dict]:
+    """Substitui no resultado anterior só os casos que rodaram agora, mantendo a ordem por id."""
+    by_id = {row["id"]: row for row in old} | {row["id"]: row for row in new}
+    return [by_id[key] for key in sorted(by_id)]
+
+
+def run_model(model: str, judge_model, case_ids: set[int] | None = None) -> list[dict]:
+    """Roda os casos (todos ou os pedidos) com um modelo e grava o JSON de resultados."""
     rows = []
     for case in CASES:
+        if case_ids and case.id not in case_ids:
+            continue
         run = asyncio.run(execute(case, model))
         verdict, judge_error = judge(run, judge_model) if run.error is None else (None, None)
         result = {**score(run, verdict), "judge_error": judge_error}
@@ -146,7 +154,10 @@ def run_model(model: str, judge_model) -> list[dict]:
         })
         print(f"{model} caso {case.id}: {'aprovado' if result['passed'] else 'reprovado'} ({run.seconds:.0f} s)")
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"{model}.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+    path = RESULTS / f"{model}.json"
+    if case_ids and path.exists():
+        rows = merge_rows(json.loads(path.read_text()), rows)
+    path.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
     return rows
 
 
@@ -196,6 +207,7 @@ def write_report() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", action="append", required=True, help="modelo sem o prefixo do provedor")
+    parser.add_argument("--case", action="append", type=int, help="roda só estes casos e mescla no resultado")
     args = parser.parse_args()
     from dotenv import load_dotenv
     from langchain.chat_models import init_chat_model
@@ -203,7 +215,7 @@ def main() -> None:
     load_dotenv(ROOT / ".env")
     judge_model = init_chat_model(JUDGE_MODEL, temperature=0).with_structured_output(Verdict)
     for model in args.model:
-        run_model(model, judge_model)
+        run_model(model, judge_model, set(args.case or []))
     write_report()
 
 
