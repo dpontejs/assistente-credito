@@ -46,12 +46,22 @@ class AssistantRunner:
         finally:
             self._ready.set()
 
+    @property
+    def error(self) -> BaseException | None:
+        """Erro da abertura do assistente, se houve; o app usa para descartar o runner e tentar de novo."""
+        return self._error
+
     def _run(self, coroutine_factory):
-        self._ready.wait(self.timeout)
+        if not self._ready.wait(self.timeout):
+            raise TimeoutError("o assistente ainda está abrindo; tente de novo em instantes")
         if self._error is not None:
             raise self._error
         future = asyncio.run_coroutine_threadsafe(coroutine_factory(self._assistant.graph), self._loop)
-        return future.result(self.timeout)
+        try:
+            return future.result(self.timeout)
+        except TimeoutError:
+            future.cancel()  # sem isso o turno seguiria rodando e disputaria a mesma thread com o próximo
+            raise TimeoutError(f"o assistente demorou mais de {self.timeout:.0f} s para responder") from None
 
     def ask(self, user_id: str, thread_id: str, text: str) -> list[BaseMessage]:
         """Envia uma mensagem e devolve todas as mensagens da thread depois do turno."""

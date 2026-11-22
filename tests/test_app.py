@@ -12,12 +12,18 @@ APP = str(Path(__file__).resolve().parent.parent / "app.py")
 
 class FakeRunner:
     instances: list = []
+    open_error: Exception | None = None
 
     def __init__(self, *args, **kwargs):
         self.asked: list[tuple] = []
         self.threads: dict[str, list] = {}
         self.fail: Exception | None = None
+        self.closed = False
+        self.error = FakeRunner.open_error
         FakeRunner.instances.append(self)
+
+    def close(self):
+        self.closed = True
 
     def ask(self, user_id, thread_id, text):
         if self.fail:
@@ -30,6 +36,8 @@ class FakeRunner:
         return self.threads[thread_id]
 
     def history(self, thread_id):
+        if self.error:
+            raise self.error
         return list(self.threads.get(thread_id, []))
 
 
@@ -51,6 +59,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setattr("credito.runner.AssistantRunner", FakeRunner)
     monkeypatch.setattr("credito.rates.RatesClient", FakeRates)
     FakeRunner.instances.clear()
+    FakeRunner.open_error = None
     st.cache_resource.clear()
     st.cache_data.clear()
     at = AppTest.from_file(APP, default_timeout=30)
@@ -100,3 +109,31 @@ def test_erro_do_assistente_vira_aviso(app):
     app.chat_input[0].set_value("oi").run()
     assert not app.exception
     assert "429" in app.error[0].value
+
+
+def test_limpar_o_cache_fecha_o_runner(app):
+    import streamlit as st
+
+    runner = FakeRunner.instances[-1]
+    st.cache_resource.clear()
+    assert runner.closed
+
+
+def test_falha_na_abertura_nao_fica_presa_no_cache(tmp_path, monkeypatch, app):
+    import streamlit as st
+
+    st.cache_resource.clear()
+    FakeRunner.open_error = RuntimeError("429 ao indexar")
+    app.run()
+    assert "429" in app.error[0].value
+    FakeRunner.open_error = None
+    app.run()
+    assert not app.error
+    assert FakeRunner.instances[-1].error is None
+
+
+def test_turno_sem_resposta_mostra_aviso(app):
+    runner = FakeRunner.instances[-1]
+    runner.threads[app.session_state.threads["ana"]] = [HumanMessage("pergunta interrompida")]
+    app.run()
+    assert any("sem resposta" in m.value for m in app.markdown)

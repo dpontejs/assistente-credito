@@ -66,3 +66,61 @@ def test_erro_ao_abrir_aparece_no_ask():
     with pytest.raises(RuntimeError, match="GOOGLE_API_KEY"):
         runner.ask("ana", "t1", "oi")
     runner.close()
+
+
+def slow_factory(state: dict):
+    class SlowGraph(FakeGraph):
+        async def ainvoke(self, input, config):
+            import asyncio
+
+            try:
+                await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                state["cancelled"] = True
+                raise
+            state["finished"] = True
+            return {"messages": []}
+
+    @asynccontextmanager
+    async def factory():
+        yield SimpleNamespace(graph=SlowGraph(), tools=[])
+
+    return factory
+
+
+def test_ask_que_estoura_o_tempo_e_cancelado_com_mensagem_clara():
+    import time
+
+    state = {}
+    runner = AssistantRunner(slow_factory(state), timeout=0.3)
+    with pytest.raises(TimeoutError, match="demorou"):
+        runner.ask("ana", "t1", "oi")
+    time.sleep(0.3)
+    assert state.get("cancelled") is True
+    assert "finished" not in state
+    runner.close()
+
+
+def test_abertura_lenta_da_erro_claro():
+    import asyncio
+
+    @asynccontextmanager
+    async def opening_forever():
+        await asyncio.sleep(10)
+        yield
+
+    runner = AssistantRunner(opening_forever, timeout=0.2)
+    with pytest.raises(TimeoutError, match="abrindo"):
+        runner.ask("ana", "t1", "oi")
+
+
+def test_runner_expoe_erro_de_abertura():
+    @asynccontextmanager
+    async def broken():
+        raise RuntimeError("429 ao indexar")
+        yield
+
+    runner = AssistantRunner(broken)
+    with pytest.raises(RuntimeError):
+        runner.history("t1")
+    assert isinstance(runner.error, RuntimeError)

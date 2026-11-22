@@ -24,8 +24,8 @@ DB = Path(os.environ.get("CREDITO_DB", ROOT / "data" / "profiles.db"))
 
 
 # st.cache_resource guarda o objeto entre as reexecuções: o assistente e os
-# servidores MCP são abertos uma vez só.
-@st.cache_resource
+# servidores MCP são abertos uma vez só, e fechados quando o cache é descartado.
+@st.cache_resource(on_release=lambda assistant: assistant.close())
 def get_runner():
     return runner.AssistantRunner()
 
@@ -79,6 +79,8 @@ try:
 except Exception as error:
     history = []
     st.error(f"Não consegui abrir o assistente: {error}")
+    if assistant.error is not None:
+        get_runner.clear()  # a próxima interação tenta abrir de novo, em vez de repetir o erro
 
 for turn in history:
     st.chat_message("user").markdown(
@@ -92,7 +94,7 @@ for turn in history:
                     st.markdown(f"- `{tool}`")
                 for skill in turn.skills:
                     st.markdown(f"- skill `{skill}`")
-        st.markdown(turn.answer)
+        st.markdown(turn.answer or "_(sem resposta: o turno foi interrompido; tente perguntar de novo)_")
 
 if question := st.chat_input("Pergunte sobre suas dívidas, juros ou direitos"):
     st.chat_message("user").markdown(question)
