@@ -19,7 +19,7 @@ from credito.rag import GradeDocuments, build_vector_store, default_embeddings, 
 from credito.skills import load_catalog, make_load_skill_tool
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MODEL = "google_genai:gemini-3.5-flash-lite"
+DEFAULT_MODEL = "google_genai:gemini-3.6-flash"  # escolhido na avaliação (evals/RESULTADOS.md)
 
 def mcp_servers(profiles_db: Path | None = None) -> dict:
     """Config dos servidores MCP; o banco de perfis vai por variável de ambiente para o servidor próprio."""
