@@ -2,7 +2,7 @@
 
 Trabalho da Unidade II de IA Agêntica (UFRN, 2026.2).
 
-**Autor:** _(nome completo)_ — GitHub [@dpontejs](https://github.com/dpontejs). Trabalho individual.
+**Autor:** Diego Medeiros Ponte — GitHub [@dpontejs](https://github.com/dpontejs). Trabalho individual.
 
 ## O que é e para quem
 
