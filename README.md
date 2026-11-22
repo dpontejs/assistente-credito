@@ -270,7 +270,7 @@ skills/                     plano-de-quitacao e avaliar-portabilidade
 data/docs/                  corpus limpo, FONTES.md e notas curadas
 evals/                      casos, executor e resultados da avaliação
 scripts/                    download do corpus, chat no terminal, diagrama do grafo
-docs/                       desenho do projeto, planos e diagrama
+docs/                       desenho do projeto, planos, diagrama, roteiro do vídeo e guia técnico (docs/apresentacao/)
 ```
 
 ## Testes
