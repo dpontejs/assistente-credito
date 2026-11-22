@@ -21,12 +21,20 @@ from credito.skills import load_catalog, make_load_skill_tool
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL = "google_genai:gemini-3.5-flash-lite"
 
-MCP_SERVERS = {
-    # servidor próprio: calculadoras, taxas do BCB e perfil
-    "credito": {"command": sys.executable, "args": [str(ROOT / "servers" / "credit_server.py")]},
-    # servidor da comunidade: data de hoje para cronogramas e prazos
-    "time": {"command": "uvx", "args": ["mcp-server-time", "--local-timezone=America/Fortaleza"]},
-}
+def mcp_servers(profiles_db: Path | None = None) -> dict:
+    """Config dos servidores MCP; o banco de perfis vai por variável de ambiente para o servidor próprio."""
+    own = {"command": sys.executable, "args": [str(ROOT / "servers" / "credit_server.py")]}
+    if profiles_db is not None:
+        own["env"] = {"CREDITO_DB": str(profiles_db), "PATH": os.environ.get("PATH", "")}
+    return {
+        # servidor próprio: calculadoras, taxas do BCB e perfil
+        "credito": own,
+        # servidor da comunidade: data de hoje para cronogramas e prazos
+        "time": {"command": "uvx", "args": ["mcp-server-time", "--local-timezone=America/Fortaleza"]},
+    }
+
+
+MCP_SERVERS = mcp_servers()
 
 
 @dataclass
@@ -36,7 +44,11 @@ class Assistant:
 
 
 @asynccontextmanager
-async def open_assistant(db_path: Path = ROOT / "data" / "checkpoints.db", model_name: str | None = None):
+async def open_assistant(
+    db_path: Path = ROOT / "data" / "checkpoints.db",
+    model_name: str | None = None,
+    profiles_db: Path | None = None,
+):
     """Abre os servidores MCP e o checkpointer e devolve o grafo pronto; tudo fecha ao sair do bloco."""
     import warnings
 
@@ -56,7 +68,7 @@ async def open_assistant(db_path: Path = ROOT / "data" / "checkpoints.db", model
                                     default_embeddings())
     local_tools = [make_search_tool(store), make_load_skill_tool(ROOT / "skills")]
 
-    adapter = MCPAdapter({"mcpServers": MCP_SERVERS})
+    adapter = MCPAdapter({"mcpServers": mcp_servers(profiles_db)})
     async with adapter, AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
         tools = [*await adapter.list_tools(), *local_tools]
         deps = Deps(

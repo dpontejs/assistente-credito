@@ -57,6 +57,11 @@ def as_error(func):
     return wrapper
 
 
+def db_path() -> Path:
+    """Banco de perfis: CREDITO_DB, se definido (a avaliação usa um banco temporário), senão data/profiles.db."""
+    return Path(os.environ.get("CREDITO_DB", ROOT / "data" / "profiles.db"))
+
+
 def build_server(db_path: Path, rates: RatesClient) -> FastMCP:
     """Monta o servidor com o banco de perfis e o cliente de taxas informados."""
     store = ProfileStore(db_path)
@@ -165,5 +170,5 @@ def build_server(db_path: Path, rates: RatesClient) -> FastMCP:
 
 
 if __name__ == "__main__":
-    server = build_server(ROOT / "data" / "profiles.db", RatesClient(ROOT / "data" / "rates_cache.json"))
+    server = build_server(db_path(), RatesClient(ROOT / "data" / "rates_cache.json"))
     server.run(show_banner=False)
