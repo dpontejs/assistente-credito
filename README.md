@@ -30,6 +30,20 @@ com cache em `data/rates_cache.json` para quando a API não responder.
 | `simulate_portability` | economia ao portar para outra taxa |
 | `get_profile`, `save_debt`, `remove_debt`, `save_plan` | perfil persistente |
 
+## Corpus
+
+Leis e normas oficiais sobre crédito ao consumidor, limpas e divididas por artigo
+em `data/docs/` (fontes, vigência e o que ficou de fora em
+[`data/docs/FONTES.md`](data/docs/FONTES.md)), mais notas curadas em
+`data/docs/notas/` para decisões que os textos oficiais ainda não refletem.
+
+```bash
+uv run python scripts/download_corpus.py   # baixa de novo do Planalto e do BCB
+```
+
+O índice (`data/chroma/`) usa embeddings `gemini-embedding-001` e é criado na
+primeira execução do agente; na cota gratuita leva uns 3 minutos.
+
 ## Testes
 
 ```bash
