@@ -8,3 +8,4 @@ __pycache__/
 .omc/
 data/chroma/
 data/checkpoints.db*
+docs/apresentacao/
