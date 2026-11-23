@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache/
 .superpowers/
 .omc/
+data/chroma/
+data/checkpoints.db*
+docs/apresentacao/

@@ -95,6 +95,11 @@ class ProfileStore:
                 for debt in debts:
                     self.save_debt(user_id, debt)
 
+    def users(self) -> list[tuple[str, str]]:
+        """Lista (id, nome) dos usuários, em ordem de nome."""
+        with closing(self._connect()) as conn:
+            return [(row["id"], row["name"]) for row in conn.execute("SELECT id, name FROM users ORDER BY name")]
+
     def get_profile(self, user_id: str) -> dict | None:
         """Devolve renda, dívidas e o plano mais recente do usuário."""
         with closing(self._connect()) as conn:
@@ -109,7 +114,9 @@ class ProfileStore:
             plan = conn.execute(
                 "SELECT text FROM plans WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
             ).fetchone()
-        return {**dict(user), "debts": [dict(d) for d in debts], "plan": plan["text"] if plan else None}
+        debts = [dict(d) for d in debts]
+        total = round(sum(d["balance"] for d in debts), 2)  # a soma vem pronta para o modelo não calcular de cabeça
+        return {**dict(user), "debts": debts, "total_balance": total, "plan": plan["text"] if plan else None}
 
     def save_debt(self, user_id: str, debt: Debt) -> int:
         """Insere a dívida ou atualiza a existente do mesmo tipo e credor; devolve o id."""
